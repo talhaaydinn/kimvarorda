@@ -22,14 +22,14 @@ function estimateWords(text) {
  * Sahne listesinden zaman çizelgesi. scenes: [{ id, say, kind?, tail?, ... }], manifest: video:voice çıktısı
  * → { TIMELINE: [{ ...sahne, from, frames, lead, audio, raw }], TOTAL, MUSIC }
  */
-export function makeTimeline(scenes, manifest = {}) {
+export function makeTimeline(scenes, manifest = {}, { lead = LEAD } = {}) {
   let from = 0;
   const TIMELINE = scenes.map((sc) => {
     const v = manifest.scenes?.[sc.id];
     const raw = v?.words?.length ? v.words : estimateWords(sc.say);
     const dur = v?.duration ?? raw.at(-1).e;
-    const frames = Math.ceil((LEAD + dur + (sc.tail ?? TAIL)) * FPS);
-    const item = { ...sc, from, frames, lead: LEAD, audio: v?.file ?? null, raw };
+    const frames = Math.ceil((lead + dur + (sc.tail ?? TAIL)) * FPS);
+    const item = { ...sc, from, frames, lead, audio: v?.file ?? null, raw };
     from += frames;
     return item;
   });

@@ -9,7 +9,7 @@ import { SCENES, SITE, STORY_OPEN, STORY_REST } from './script.js';
 import manifest from './voice-manifest.json';
 import { ART_FOR, ITEM_ART, World } from './art.jsx';
 
-const { TIMELINE, TOTAL } = makeTimeline(SCENES, manifest);
+const { TIMELINE, TOTAL } = makeTimeline(SCENES, manifest, { lead: 0.2 });
 export const VAKA_TOTAL = TOTAL;
 
 // Çizimler yalnızca yazıldıkları vakada kullanılır; başka bir vakada emojili sade görünüm
@@ -254,6 +254,19 @@ function Ipucu({ s }) {
   );
 }
 
+/** Nabız gibi atan site adresi (videonun kapanışı) */
+function SiteButon({ at }) {
+  const frame = useCurrentFrame();
+  const p = useSpring(at);
+  const pulse = 1 + Math.sin(frame / 6) * 0.025;
+  return (
+    <>
+      <div style={{ marginTop: 44, background: C.accent, color: '#1a0905', borderRadius: 24, padding: '20px 40px', fontFamily: SERIF, fontWeight: 900, fontSize: 52, opacity: p, transform: `scale(${p * pulse})` }}>{SITE}</div>
+      <Sfx name="hit" at={at} volume={0.5} />
+    </>
+  );
+}
+
 function Ozet({ s }) {
   return (
     <AbsoluteFill>
@@ -271,6 +284,7 @@ function Ozet({ s }) {
         <div style={{ marginTop: 44, width: '100%', borderTop: `2px solid ${C.line}`, paddingTop: 34 }}>
           <MiniDosya at={10} />
         </div>
+        <SiteButon at={cue(s, 'kimvarorda', 0.5)} />
       </Stage>
     </AbsoluteFill>
   );

@@ -12,15 +12,15 @@ const paras = VAKA.story.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
 export const STORY_OPEN = paras[0] || '';
 export const STORY_REST = paras.slice(1).filter((p) => !isQuestions(p));
 
-/** "Çaycı Hüsnü. Bıyıklı, kısa boylu. Yirmi yıldır…" */
-const itemSay = (it) => [it.name + '.', it.traits.length ? cap(it.traits.join(', ')) + '.' : '', it.desc].filter(Boolean).join(' ');
+const sentences = (p) => p.match(/[^.!?…]+[.!?…]+/g)?.map((x) => x.trim()) ?? [p];
+const FIRST = sentences(STORY_OPEN)[0] || '';
 
+// ~1 dakikalık akış: kapakta hikâyenin ilk cümlesi; nitelikler/açıklamalar ekranda görünür ama okunmaz;
+// ipuçları numarasız okunur. Hikâyenin geri kalanı sitede.
 export const SCENES = [
-  { id: 'kapak', kind: 'kapak', say: `Vaka ${VAKA.no ?? ''}: ${VAKA.title}. ${STORY_OPEN}`, tail: 0.6 },
-  { id: 'hikaye', kind: 'hikaye', say: `${STORY_REST.join(' ')} Kim? Nerede? Neyle?`, tail: 0.8 },
-  ...VAKA.categories.map((c) => ({ id: `kat-${c.key}`, kind: 'kategori', cat: c.key, say: `${c.label}. ${c.items.map(itemSay).join(' ')}`, tail: 0.8 })),
-  ...VAKA.clues.map((cl, i) => ({ id: `ipucu-${i + 1}`, kind: 'ipucu', clue: i, say: `İpucu ${i + 1}. ${cl.text}`, tail: 1.4 })),
-  { id: 'gorev', kind: 'gorev', say: 'Şimdi sıra sende. Web sitesindeki tabloyu doldur, katili bul, adın sıralamaya yazılsın.', tail: 1.0 },
-  { id: 'ozet', kind: 'ozet', say: 'Bütün ipuçları ekranda. Videoyu durdur ve ekran görüntüsünü al.', tail: 2.5 },
-  { id: 'cta', kind: 'cta', say: `Kim? Nerede? Neyle? Cevabını ${SITE_SAY} adresinde gönder. Tek hakkın var; ilk doğru bilen zirveye çıkar.`, tail: 1.2 },
+  { id: 'kapak', kind: 'kapak', say: `Vaka ${VAKA.no ?? ''}: ${VAKA.title}. ${FIRST}`, tail: 0.3 },
+  ...VAKA.categories.map((c) => ({ id: `kat-${c.key}`, kind: 'kategori', cat: c.key, say: `${c.label}: ${c.items.map((it) => it.name).join(', ')}.`, tail: 0.4 })),
+  ...VAKA.clues.map((cl, i) => ({ id: `ipucu-${i + 1}`, kind: 'ipucu', clue: i, say: cl.text, tail: 0.4 })),
+  { id: 'gorev', kind: 'gorev', say: 'Sıra sende: sitede tabloyu doldur, katili bul, adın sıralamaya yazılsın.', tail: 0.4 },
+  { id: 'ozet', kind: 'ozet', say: `Ekran görüntüsünü al, cevabını ${SITE_SAY} adresinde gönder.`, tail: 1.6 },
 ];

@@ -25,12 +25,13 @@ const API = 'https://api.elevenlabs.io/v1';
 const KEY = process.env.ELEVENLABS_API_KEY;
 const VOICE = process.env.ELEVENLABS_VOICE_ID || 'JBFqnCBsd6RMkjVDRZzb';
 const MODEL = process.env.ELEVENLABS_MODEL || 'eleven_multilingual_v2';
-const SETTINGS = { stability: 0.45, similarity_boost: 0.8, style: 0.35, use_speaker_boost: true };
 
 const args = new Set(process.argv.slice(2));
 const PUB = resolve('video/public');
 // --vaka: vaka videosu (ayrı senaryo, manifest ve ses klasörü); yoksa "Nasıl oynanır?"
 const VAKA = args.has('--vaka');
+// Vaka videoları ~1 dk olmalı: anlatım biraz daha hızlı (ElevenLabs speed 0.7–1.2)
+const SETTINGS = { stability: 0.45, similarity_boost: 0.8, style: 0.35, use_speaker_boost: true, ...(VAKA ? { speed: 1.2 } : {}) };
 const { SCENES } = await import(VAKA ? '../video/src/vaka/script.js' : '../video/src/script.js');
 const { SFX } = await import('../video/src/script.js');
 const MANIFEST = resolve(VAKA ? 'video/src/vaka/voice-manifest.json' : 'video/src/voice-manifest.json');
