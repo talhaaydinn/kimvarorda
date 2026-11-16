@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../../api.js';
 import { StatusChip, ErrorBox } from '../../components/common.jsx';
@@ -21,12 +21,38 @@ export default function AdminCases() {
     nav('/admin/giris');
   }
 
+  // Vaka editöründeki "JSON indir" çıktısını (ya da hazır bir vaka dosyasını) taslak olarak ekler
+  const fileRef = useRef(null);
+  async function importJson(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setError(null);
+    try {
+      let parsed;
+      try {
+        parsed = JSON.parse(await file.text());
+      } catch {
+        throw new Error('Dosya okunamadı: geçerli bir vaka JSON dosyası değil.');
+      }
+      const { no: _no, id: _id, ...data } = parsed.data ?? parsed;
+      const r = await api.post('/api/admin/cases', { data });
+      nav(`/admin/vaka/${r.id}`);
+    } catch (err) {
+      guard(setError)(err);
+    }
+  }
+
   return (
     <div className="wrap">
       <div className="admin-bar">
         <h1 style={{ fontSize: 34 }}>Vakalar</h1>
         <div className="row-actions">
           <Link to="/admin/vaka/yeni" className="btn primary">+ Yeni vaka</Link>
+          <button className="btn" onClick={() => fileRef.current?.click()} title="Hazır bir vaka dosyasını taslak olarak ekle">
+            JSON'dan içe aktar
+          </button>
+          <input ref={fileRef} type="file" accept="application/json,.json" onChange={importJson} hidden />
           <button className="btn ghost" onClick={logout}>Çıkış</button>
         </div>
       </div>
