@@ -28,14 +28,15 @@ const MODEL = process.env.ELEVENLABS_MODEL || 'eleven_multilingual_v2';
 
 const args = new Set(process.argv.slice(2));
 const PUB = resolve('video/public');
-// --vaka: vaka videosu (ayrı senaryo, manifest ve ses klasörü); yoksa "Nasıl oynanır?"
-const VAKA = args.has('--vaka');
-// Vaka videoları ~1 dk olmalı: anlatım biraz daha hızlı (ElevenLabs speed 0.7–1.2)
-const SETTINGS = { stability: 0.45, similarity_boost: 0.8, style: 0.35, use_speaker_boost: true, ...(VAKA ? { speed: 1.2 } : {}) };
-const { SCENES } = await import(VAKA ? '../video/src/vaka/script.js' : '../video/src/script.js');
+// --vaka: vaka videosu, --tablo: tablo rehberi (her biri ayrı senaryo, manifest ve ses klasörü); yoksa "Nasıl oynanır?"
+const MODE = args.has('--vaka') ? 'vaka' : args.has('--tablo') ? 'tablo' : null;
+// Vaka videoları ~1 dk olmalı: anlatım daha hızlı (ElevenLabs speed 0.7–1.2)
+const SPEED = { vaka: 1.2, tablo: 1.1 }[MODE];
+const SETTINGS = { stability: 0.45, similarity_boost: 0.8, style: 0.35, use_speaker_boost: true, ...(SPEED ? { speed: SPEED } : {}) };
+const { SCENES } = await import(MODE ? `../video/src/${MODE}/script.js` : '../video/src/script.js');
 const { SFX } = await import('../video/src/script.js');
-const MANIFEST = resolve(VAKA ? 'video/src/vaka/voice-manifest.json' : 'video/src/voice-manifest.json');
-const VOICE_DIR = VAKA ? 'vaka/voice' : 'voice';
+const MANIFEST = resolve(MODE ? `video/src/${MODE}/voice-manifest.json` : 'video/src/voice-manifest.json');
+const VOICE_DIR = MODE ? `${MODE}/voice` : 'voice';
 
 // process.exit() açık fetch bağlantılarıyla Windows'ta libuv "Assertion failed" hatası veriyor;
 // bunun yerine hata fırlatıp süreci kendi hâlinde kapatıyoruz.
@@ -142,7 +143,7 @@ for (const [i, sc] of SCENES.entries()) {
 }
 
 // ---------- ses efektleri ----------
-if (args.has('--sfx') && !VAKA) {
+if (args.has('--sfx') && !MODE) {
   mkdirSync(resolve(PUB, 'sfx'), { recursive: true });
   for (const [name, fx] of Object.entries(SFX)) {
     const file = resolve(PUB, 'sfx', `${name}.mp3`);
