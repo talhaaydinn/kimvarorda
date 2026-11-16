@@ -15,9 +15,11 @@ services:
         value: "22"
       - key: NODE_ENV
         value: production
-      # Render'ın proxy'si arkasında gerçek ziyaretçi IP'si için (deploy sonrası /api/health ile doğrula)
+      # Zincir: ziyaretçi → Cloudflare → Render yük dengeleyici → uygulama = 3 adım.
+      # 1 olursa herkes Render'ın iç IP'si (10.x) görünür ve ağ kilidi herkesi birlikte kilitler.
+      # Doğrulama: /api/health → "ip" senin gerçek IP'n olmalı (2026-11-16'da ölçüldü).
       - key: TRUST_PROXY
-        value: "1"
+        value: "3"
       - key: SESSION_SECRET
         generateValue: true
       - key: ADMIN_PASSWORD
