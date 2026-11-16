@@ -1,104 +1,17 @@
-import {
-  AbsoluteFill, Audio, Easing, Sequence, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig,
-} from 'remotion';
+import { AbsoluteFill, Audio, interpolate, spring, staticFile, useCurrentFrame } from 'remotion';
 import { C, MONO, SANS, SERIF } from './theme.js';
-import { FPS, MUSIC, SFX, TIMELINE, TOTAL, cue } from './timeline.js';
+import { FPS, cue, makeTimeline } from './timeline.js';
+import { Background, Brand, Kicker, Mark, Sfx, Stage, Track, clamp, fadeUp, useSpring } from './ui.jsx';
+import { SCENES } from './script.js';
+import manifest from './voice-manifest.json';
 import { sampleCase } from '../../scripts/sample-case.js';
+
+const { TIMELINE, TOTAL, MUSIC } = makeTimeline(SCENES, manifest);
+export const HOWTO_TOTAL = TOTAL;
 
 // Örnek vakadaki öğeler (tamamen özgün kurgu)
 const CATS = Object.fromEntries(sampleCase.categories.map((c) => [c.key, c.items]));
 const byId = (id) => sampleCase.categories.flatMap((c) => c.items).find((i) => i.id === id);
-
-const clamp = { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' };
-const ease = Easing.bezier(0.2, 0.8, 0.2, 1);
-
-/** f karesinde başlayan yaylı giriş (0 → 1) */
-function useSpring(at, config = { damping: 14, stiffness: 140 }) {
-  const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  return spring({ frame: frame - at, fps, config });
-}
-const fadeUp = (p, dist = 40) => ({ opacity: p, transform: `translateY(${(1 - p) * dist}px)` });
-
-// ---------- genel katmanlar ----------
-function Background() {
-  const frame = useCurrentFrame();
-  const x = 50 + Math.sin(frame / 90) * 18;
-  const y = 30 + Math.cos(frame / 120) * 8;
-  return (
-    <AbsoluteFill style={{ background: C.bg }}>
-      <AbsoluteFill
-        style={{
-          background: `radial-gradient(900px 900px at ${x}% ${y}%, rgba(255,79,59,0.13), transparent 60%),
-                       radial-gradient(1200px 800px at 50% 110%, rgba(76,194,168,0.06), transparent 60%)`,
-        }}
-      />
-      {/* film greni */}
-      <svg width="100%" height="100%" style={{ position: 'absolute', opacity: 0.09, mixBlendMode: 'overlay' }}>
-        <filter id="grain">
-          <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed={Math.floor(frame / 2) % 50} />
-        </filter>
-        <rect width="100%" height="100%" filter="url(#grain)" />
-      </svg>
-      <AbsoluteFill style={{ background: 'radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.65) 100%)' }} />
-    </AbsoluteFill>
-  );
-}
-
-function Mark({ size = 120 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 64 64">
-      <circle cx="32" cy="25" r="10" fill={C.accent} />
-      <path d="M26 31h12l4 20H22z" fill={C.accent} />
-    </svg>
-  );
-}
-
-function Brand() {
-  return (
-    <div style={{ position: 'absolute', top: 150, left: 0, right: 0, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 14 }}>
-      <Mark size={56} />
-      <span style={{ fontFamily: SERIF, fontWeight: 700, fontSize: 44, color: C.text, letterSpacing: '-0.01em' }}>
-        kimvarorda<span style={{ color: C.accent }}>.ai</span>
-      </span>
-    </div>
-  );
-}
-
-/** Sahne geçişi: hafif yakınlaşarak girer, solarak çıkar */
-function SceneWrap({ frames, children }) {
-  const frame = useCurrentFrame();
-  const inP = interpolate(frame, [0, 10], [0, 1], { ...clamp, easing: ease });
-  const outP = interpolate(frame, [frames - 9, frames], [1, 0], clamp);
-  return (
-    <AbsoluteFill style={{ opacity: Math.min(inP, outP), transform: `scale(${0.96 + inP * 0.04})` }}>
-      {children}
-    </AbsoluteFill>
-  );
-}
-
-const Kicker = ({ children, color = C.accent, style }) => (
-  // CSS uppercase "i"yi "I" yapar; Türkçe kurallarıyla elle büyütüyoruz (Bir → BİR)
-  <div style={{ fontFamily: MONO, fontWeight: 600, fontSize: 30, letterSpacing: '0.16em', color, ...style }}>
-    {typeof children === 'string' ? children.toLocaleUpperCase('tr') : children}
-  </div>
-);
-
-/** Ortadaki içerik alanı: üstte marka, altta Instagram arayüzü (açıklama, butonlar) için boşluk */
-const Stage = ({ children, style }) => (
-  <div style={{ position: 'absolute', top: 280, left: 70, right: 70, height: 1220, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', ...style }}>
-    {children}
-  </div>
-);
-
-function Sfx({ name, at, volume = 0.6 }) {
-  if (!SFX[name]) return null;
-  return (
-    <Sequence from={Math.max(0, at)} layout="none">
-      <Audio src={staticFile(SFX[name])} volume={volume} />
-    </Sequence>
-  );
-}
 
 // ---------- 1. Giriş ----------
 function Hook({ s }) {
@@ -428,20 +341,7 @@ export function HowTo() {
       <Background />
       <Brand />
       {MUSIC && <Audio src={staticFile(MUSIC)} volume={(f) => interpolate(f, [0, 20, TOTAL - 40, TOTAL], [0, 0.12, 0.12, 0], clamp)} />}
-      {TIMELINE.map((s, i) => {
-        const View = SCENE_VIEW[s.id];
-        return (
-          <Sequence key={s.id} from={s.from} durationInFrames={s.frames} name={s.id}>
-            <SceneWrap frames={s.frames}>{View && <View s={s} />}</SceneWrap>
-            {s.audio && (
-              <Sequence from={Math.round(s.lead * FPS)} layout="none">
-                <Audio src={staticFile(s.audio)} />
-              </Sequence>
-            )}
-            {i > 0 && <Sfx name="whoosh" at={0} volume={0.35} />}
-          </Sequence>
-        );
-      })}
+      <Track timeline={TIMELINE} views={SCENE_VIEW} />
     </AbsoluteFill>
   );
 }

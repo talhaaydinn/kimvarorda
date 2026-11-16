@@ -1,12 +1,9 @@
 // Sahne zamanlaması: seslendirme varsa gerçek kelime zamanları, yoksa tahmini süreler.
-import manifest from './voice-manifest.json';
-import { SCENES } from './script.js';
-
 export const FPS = 30;
 export const W = 1080;
 export const H = 1920;
 const LEAD = 0.4; // sahne başladıktan sonra sesin girdiği an (sn)
-const TAIL = 0.7; // ses bittikten sonra sahnenin sürdüğü süre (sn)
+const TAIL = 0.7; // ses bittikten sonra sahnenin sürdüğü süre (sn) — sahne `tail` ile değiştirebilir
 
 const norm = (s) => s.toLocaleLowerCase('tr').replace(/[^\p{L}\p{N}]/gu, '');
 
@@ -21,48 +18,30 @@ function estimateWords(text) {
   });
 }
 
-/** Okunuşu farklı yazılan öbekleri altyazıda birleştirir: "kimvarorda nokta ey ay" → "kimvarorda.ai" */
-function fixCaptions(words, fixes = []) {
-  let out = words;
-  for (const [from, to] of fixes) {
-    const pat = from.split(' ').map(norm);
-    const next = [];
-    for (let i = 0; i < out.length; i++) {
-      if (pat.every((p, k) => out[i + k] && norm(out[i + k].w) === p)) {
-        const last = out[i + pat.length - 1];
-        next.push({ w: to + (last.w.match(/[^\p{L}\p{N}]+$/u)?.[0] || ''), s: out[i].s, e: last.e });
-        i += pat.length - 1;
-      } else next.push(out[i]);
-    }
-    out = next;
-  }
-  return out;
-}
-
-export const TIMELINE = (() => {
+/**
+ * Sahne listesinden zaman çizelgesi. scenes: [{ id, say, kind?, tail?, ... }], manifest: video:voice çıktısı
+ * → { TIMELINE: [{ ...sahne, from, frames, lead, audio, raw }], TOTAL, MUSIC }
+ */
+export function makeTimeline(scenes, manifest = {}) {
   let from = 0;
-  return SCENES.map((sc) => {
+  const TIMELINE = scenes.map((sc) => {
     const v = manifest.scenes?.[sc.id];
     const raw = v?.words?.length ? v.words : estimateWords(sc.say);
     const dur = v?.duration ?? raw.at(-1).e;
-    const frames = Math.ceil((LEAD + dur + TAIL) * FPS);
-    const item = { ...sc, from, frames, lead: LEAD, audio: v?.file ?? null, raw, words: fixCaptions(raw, sc.captions) };
+    const frames = Math.ceil((LEAD + dur + (sc.tail ?? TAIL)) * FPS);
+    const item = { ...sc, from, frames, lead: LEAD, audio: v?.file ?? null, raw };
     from += frames;
     return item;
   });
-})();
-
-export const TOTAL = TIMELINE.at(-1).from + TIMELINE.at(-1).frames;
-export const HAS_VOICE = TIMELINE.every((s) => s.audio);
-export const SFX = manifest.sfx || {};
-export const MUSIC = manifest.music || null;
+  return { TIMELINE, TOTAL: from, MUSIC: manifest.music || null };
+}
 
 /**
  * `phrase` seslendirmede söylendiği an (sahne içi frame). Ekler tolere edilir: "ampul" → "ampulün".
- * Bulunamazsa sahnenin `fallback` oranındaki frame.
+ * Kelime tekrar ediyorsa çok kelimeli öbek kullan ("Ampul mahzeni"). Bulunamazsa sahnenin `fallback` oranı.
  */
 export function cue(scene, phrase, fallback = 0.5) {
-  const pat = phrase.split(/\s+/).map(norm);
+  const pat = phrase.split(/\s+/).map(norm).filter(Boolean);
   const ws = scene.raw;
   for (let i = 0; i < ws.length; i++) {
     if (pat.every((p, k) => ws[i + k] && norm(ws[i + k].w).startsWith(p))) {
@@ -71,3 +50,6 @@ export function cue(scene, phrase, fallback = 0.5) {
   }
   return Math.round(scene.frames * fallback);
 }
+
+/** Seslendirmenin bittiği an (sahne içi frame) */
+export const voiceEnd = (scene) => Math.round((scene.lead + scene.raw.at(-1).e) * FPS);

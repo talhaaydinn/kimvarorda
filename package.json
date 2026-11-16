@@ -17,7 +17,9 @@
     "video:voice": "node scripts/video-voice.mjs",
     "video:studio": "remotion studio",
     "video:render": "remotion render NasilOynanir out/nasil-oynanir.mp4",
-    "backup": "node scripts/backup.mjs"
+    "backup": "node scripts/backup.mjs",
+    "video:vaka": "node scripts/video-vaka.mjs",
+    "video:render:vaka": "remotion render Vaka out/vaka.mp4"
   },
   "dependencies": {
     "@libsql/client": "0.18.0",

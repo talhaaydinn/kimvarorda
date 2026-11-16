@@ -1,5 +1,6 @@
-// "Nasıl oynanır?" videosu için ElevenLabs seslendirmesi ve ses efektleri.
+// Videolar için ElevenLabs seslendirmesi ve ses efektleri.
 //
+//   npm run video:voice -- --vaka         → vaka videosu (önce: npm run video:vaka -- <vaka.json>)
 //   npm run video:voice                 → değişen sahneleri seslendirir (önbellekli)
 //   npm run video:voice -- --sfx        → ses efektlerini de üretir (bir kez)
 //   npm run video:voice -- --voices     → hesabındaki sesleri listeler (ELEVENLABS_VOICE_ID seçmek için)
@@ -13,7 +14,6 @@
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { SCENES, SFX } from '../video/src/script.js';
 
 try {
   process.loadEnvFile();
@@ -29,7 +29,12 @@ const SETTINGS = { stability: 0.45, similarity_boost: 0.8, style: 0.35, use_spea
 
 const args = new Set(process.argv.slice(2));
 const PUB = resolve('video/public');
-const MANIFEST = resolve('video/src/voice-manifest.json');
+// --vaka: vaka videosu (ayrı senaryo, manifest ve ses klasörü); yoksa "Nasıl oynanır?"
+const VAKA = args.has('--vaka');
+const { SCENES } = await import(VAKA ? '../video/src/vaka/script.js' : '../video/src/script.js');
+const { SFX } = await import('../video/src/script.js');
+const MANIFEST = resolve(VAKA ? 'video/src/vaka/voice-manifest.json' : 'video/src/voice-manifest.json');
+const VOICE_DIR = VAKA ? 'vaka/voice' : 'voice';
 
 // process.exit() açık fetch bağlantılarıyla Windows'ta libuv "Assertion failed" hatası veriyor;
 // bunun yerine hata fırlatıp süreci kendi hâlinde kapatıyoruz.
@@ -83,7 +88,7 @@ if (args.has('--voices')) {
 // ---------- seslendirme ----------
 const old = existsSync(MANIFEST) ? JSON.parse(readFileSync(MANIFEST, 'utf8')) : {};
 const manifest = { scenes: {}, sfx: old.sfx || {}, voice: VOICE, model: MODEL };
-mkdirSync(resolve(PUB, 'voice'), { recursive: true });
+mkdirSync(resolve(PUB, VOICE_DIR), { recursive: true });
 
 /** Karakter zamanlamalarından kelime listesi: [{ w, s, e }] (saniye) */
 function toWords(al) {
@@ -106,7 +111,7 @@ function toWords(al) {
 let spent = 0;
 for (const [i, sc] of SCENES.entries()) {
   const hash = createHash('sha1').update(JSON.stringify([sc.say, VOICE, MODEL, SETTINGS])).digest('hex').slice(0, 12);
-  const file = resolve(PUB, 'voice', `${sc.id}.mp3`);
+  const file = resolve(PUB, VOICE_DIR, `${sc.id}.mp3`);
   const prev = old.scenes?.[sc.id];
   if (!args.has('--force') && prev?.hash === hash && existsSync(file)) {
     manifest.scenes[sc.id] = prev;
@@ -130,13 +135,13 @@ for (const [i, sc] of SCENES.entries()) {
   const al = j.alignment || j.normalized_alignment;
   const words = toWords(al);
   const duration = al.character_end_times_seconds.at(-1);
-  manifest.scenes[sc.id] = { hash, file: `voice/${sc.id}.mp3`, duration: +duration.toFixed(3), words };
+  manifest.scenes[sc.id] = { hash, file: `${VOICE_DIR}/${sc.id}.mp3`, duration: +duration.toFixed(3), words };
   spent += sc.say.length;
   console.log(`  ✓ ${sc.id}: ${duration.toFixed(1)} sn, ${words.length} kelime`);
 }
 
 // ---------- ses efektleri ----------
-if (args.has('--sfx')) {
+if (args.has('--sfx') && !VAKA) {
   mkdirSync(resolve(PUB, 'sfx'), { recursive: true });
   for (const [name, fx] of Object.entries(SFX)) {
     const file = resolve(PUB, 'sfx', `${name}.mp3`);
