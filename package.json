@@ -1,0 +1,36 @@
+{
+  "name": "kimvarorda",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "kimvarorda.ai — Instagram videoları için mantık bulmacası (kim, nerede, neyle?) sitesi",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "dev": "node scripts/dev.js",
+    "dev:server": "node --watch server/index.js",
+    "build": "vite build",
+    "start": "node server/index.js",
+    "seed": "node scripts/seed.js",
+    "test": "node --test scripts/engine.test.js",
+    "video:voice": "node scripts/video-voice.mjs",
+    "video:studio": "remotion studio",
+    "video:render": "remotion render NasilOynanir out/nasil-oynanir.mp4",
+    "deploy": "node deploy/deploy.mjs",
+    "backup": "node deploy/backup.mjs"
+  },
+  "dependencies": {
+    "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "@remotion/cli": "4.0.539",
+    "@remotion/google-fonts": "4.0.539",
+    "@vitejs/plugin-react": "^4.3.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.0",
+    "remotion": "4.0.539",
+    "vite": "^6.0.7"
+  }
+}
