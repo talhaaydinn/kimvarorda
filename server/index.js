@@ -2,7 +2,7 @@ import './env.js';
 import express from 'express';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { db, q } from './db.js';
+import { client, q } from './db.js';
 import { checkPassword, setAdminCookie, clearAdminCookie, isAdmin, requireAdmin, deviceId, hashIp } from './auth.js';
 import { isCorrectAnswer, murderAnswer } from '../shared/engine.js';
 import { normalizeUsername, usernameKey, USERNAME_RE } from '../shared/format.js';
@@ -72,22 +72,22 @@ function publicCase(row) {
 }
 
 const lbCache = new Map(); // case_id -> { at, body }
-function leaderboard(row) {
+async function leaderboard(row) {
   const hit = lbCache.get(row.id);
   if (hit && now() - hit.at < 2000) return hit.body;
-  const list = q.correctList.all(row.id, 1000).map((s, i) => ({
+  const list = (await q.correctList.all(row.id, 1000)).map((s, i) => ({
     rank: i + 1,
     username: s.username,
     ms: row.publish_at ? Math.max(0, s.created_at - row.publish_at) : null,
   }));
-  const { total, correct } = q.counts.get(row.id);
+  const { total, correct } = await q.counts.get(row.id);
   const body = { no: row.no, status: row.status, publishAt: row.publish_at, list, total, correct, wrong: total - correct };
   lbCache.set(row.id, { at: now(), body });
   return body;
 }
 
-function getCaseOr404(req, res) {
-  const row = parse(q.caseByNo.get(Number(req.params.no)));
+async function getCaseOr404(req, res) {
+  const row = parse(await q.caseByNo.get(Number(req.params.no)));
   if (!row || (row.status === 'draft' && !isAdmin(req))) {
     res.status(404).json({ error: 'Vaka bulunamadı' });
     return null;
@@ -111,9 +111,9 @@ function rateLimit(max, windowMs) {
 setInterval(() => hits.clear(), 10 * 60 * 1000).unref();
 
 /** Bu ağ kilitliyse kilidin kalkacağı an (ms), değilse 0. Veritabanından hesaplanır: yeniden başlatmada kaybolmaz. */
-function networkLockedUntil(ipHash) {
+async function networkLockedUntil(ipHash) {
   if (!BURST_LIMIT) return 0;
-  const rows = q.ipRecent.all(ipHash, BURST_LIMIT);
+  const rows = await q.ipRecent.all(ipHash, BURST_LIMIT);
   if (rows.length < BURST_LIMIT) return 0;
   const newest = rows[0].created_at;
   const oldest = rows[rows.length - 1].created_at;
@@ -132,47 +132,48 @@ function badName(name) {
 // ---------- herkese açık API ----------
 // Sağlık kontrolü (deploy sonrası). `ip`: sunucunun seni hangi IP ile gördüğü — proxy ayarı (TRUST_PROXY)
 // yanlışsa herkes 127.0.0.1 görünür ve ağ kilidi herkesi birlikte kilitler.
-app.get('/api/health', (req, res) => {
-  q.nextNo.get();
-  res.json({ ok: true, ip: req.ip });
+app.get('/api/health', async (req, res) => {
+  await q.nextNo.get();
+  // xff: proxy zinciri — TRUST_PROXY'nin doğru sayıda adıma ayarlandığını doğrulamak için
+  res.json({ ok: true, ip: req.ip, xff: req.headers['x-forwarded-for'] || null });
 });
 
-app.get('/api/cases', (req, res) => {
-  res.json(q.publicCases.all().map(caseSummary));
+app.get('/api/cases', async (req, res) => {
+  res.json((await q.publicCases.all()).map(caseSummary));
 });
 
-app.get('/api/cases/:no', (req, res) => {
-  const row = getCaseOr404(req, res);
+app.get('/api/cases/:no', async (req, res) => {
+  const row = await getCaseOr404(req, res);
   if (row) res.json(publicCase(row));
 });
 
-app.get('/api/cases/:no/leaderboard', (req, res) => {
-  const row = getCaseOr404(req, res);
-  if (row) res.json(leaderboard(row));
+app.get('/api/cases/:no/leaderboard', async (req, res) => {
+  const row = await getCaseOr404(req, res);
+  if (row) res.json(await leaderboard(row));
 });
 
-app.get('/api/cases/:no/me', (req, res) => {
-  const row = getCaseOr404(req, res);
+app.get('/api/cases/:no/me', async (req, res) => {
+  const row = await getCaseOr404(req, res);
   if (!row) return;
   const dev = deviceId(req, res);
-  const s = q.subByDevice.get(row.id, dev);
+  const s = await q.subByDevice.get(row.id, dev);
   if (!s) return res.json({ submitted: false });
-  res.json(submissionResult(row, s));
+  res.json(await submissionResult(row, s));
 });
 
-function submissionResult(row, s) {
+async function submissionResult(row, s) {
   return {
     submitted: true,
     username: s.username,
     correct: !!s.correct,
-    rank: s.correct ? q.rankOf.get(row.id, s.id).r : null,
+    rank: s.correct ? (await q.rankOf.get(row.id, s.id)).r : null,
     ms: row.publish_at ? Math.max(0, s.created_at - row.publish_at) : null,
     answer: JSON.parse(s.answer),
   };
 }
 
-app.post('/api/cases/:no/submit', rateLimit(SUBMIT_RATE, 60_000), (req, res) => {
-  const row = getCaseOr404(req, res);
+app.post('/api/cases/:no/submit', rateLimit(SUBMIT_RATE, 60_000), async (req, res) => {
+  const row = await getCaseOr404(req, res);
   if (!row) return;
   if (!isLive(row)) {
     return res.status(400).json({ error: row.status === 'closed' ? 'Bu vaka kapandı, artık cevap alınmıyor.' : 'Bu vaka henüz cevaba açılmadı.' });
@@ -193,15 +194,15 @@ app.post('/api/cases/:no/submit', rateLimit(SUBMIT_RATE, 60_000), (req, res) => 
   }
 
   const dev = deviceId(req, res);
-  const prev = q.subByDevice.get(row.id, dev);
-  if (prev) return res.status(409).json({ error: 'Bu vaka için cevabını zaten gönderdin.', result: submissionResult(row, prev) });
+  const prev = await q.subByDevice.get(row.id, dev);
+  if (prev) return res.status(409).json({ error: 'Bu vaka için cevabını zaten gönderdin.', result: await submissionResult(row, prev) });
 
   const key = usernameKey(username);
-  if (q.subByName.get(row.id, key)) {
+  if (await q.subByName.get(row.id, key)) {
     return res.status(409).json({ error: 'Bu kullanıcı adıyla bu vakaya zaten cevap verilmiş.' });
   }
   const ipHash = hashIp(req.ip);
-  const lockedUntil = isAdmin(req) ? 0 : networkLockedUntil(ipHash);
+  const lockedUntil = isAdmin(req) ? 0 : await networkLockedUntil(ipHash);
   if (lockedUntil) {
     const sec = Math.ceil((lockedUntil - now()) / 1000);
     res.set('Retry-After', String(sec));
@@ -210,7 +211,7 @@ app.post('/api/cases/:no/submit', rateLimit(SUBMIT_RATE, 60_000), (req, res) => 
       retryAfter: sec,
     });
   }
-  if (q.ipCount.get(row.id, ipHash).n >= MAX_PER_IP) {
+  if ((await q.ipCount.get(row.id, ipHash)).n >= MAX_PER_IP) {
     return res.status(429).json({ error: 'Bu ağdan bu vaka için çok fazla cevap gönderildi.' });
   }
 
@@ -218,27 +219,27 @@ app.post('/api/cases/:no/submit', rateLimit(SUBMIT_RATE, 60_000), (req, res) => 
   let info;
   const t = now();
   try {
-    info = q.insertSub.run(row.id, username, key, JSON.stringify(answer), correct ? 1 : 0, dev, ipHash, t);
+    info = await q.insertSub.run(row.id, username, key, JSON.stringify(answer), correct ? 1 : 0, dev, ipHash, t);
   } catch (e) {
     if (String(e.message).includes('UNIQUE')) return res.status(409).json({ error: 'Bu kullanıcı adıyla bu vakaya zaten cevap verilmiş.' });
     throw e;
   }
   lbCache.delete(row.id);
   const s = { id: Number(info.lastInsertRowid), username, correct: correct ? 1 : 0, created_at: t, answer: JSON.stringify(answer) };
-  res.json(submissionResult(row, s));
+  res.json(await submissionResult(row, s));
 });
 
 // ---------- admin API ----------
-app.post('/api/admin/login', rateLimit(10, 60_000), (req, res) => {
+app.post('/api/admin/login', rateLimit(10, 60_000), async (req, res) => {
   if (!checkPassword(req.body?.password || '')) return res.status(401).json({ error: 'Şifre yanlış' });
   setAdminCookie(res);
   res.json({ ok: true });
 });
-app.post('/api/admin/logout', (req, res) => {
+app.post('/api/admin/logout', async (req, res) => {
   clearAdminCookie(res);
   res.json({ ok: true });
 });
-app.get('/api/admin/me', (req, res) => res.json({ admin: isAdmin(req) }));
+app.get('/api/admin/me', async (req, res) => res.json({ admin: isAdmin(req) }));
 
 app.use('/api/admin', requireAdmin);
 
@@ -254,37 +255,37 @@ function validateData(d) {
   return null;
 }
 
-app.get('/api/admin/cases', (req, res) => {
-  res.json(q.allCases.all().map((r) => ({ ...caseSummary(r), id: r.id })));
+app.get('/api/admin/cases', async (req, res) => {
+  res.json((await q.allCases.all()).map((r) => ({ ...caseSummary(r), id: r.id })));
 });
 
-app.post('/api/admin/cases', (req, res) => {
+app.post('/api/admin/cases', async (req, res) => {
   const err = validateData(req.body?.data);
   if (err) return res.status(400).json({ error: err });
   const t = now();
-  const no = q.nextNo.get().n;
-  const info = q.insertCase.run(no, 'draft', JSON.stringify(req.body.data), t, t);
-  res.json(adminCase(parse(q.caseById.get(Number(info.lastInsertRowid)))));
+  const no = (await q.nextNo.get()).n;
+  const info = await q.insertCase.run(no, 'draft', JSON.stringify(req.body.data), t, t);
+  res.json(adminCase(parse(await q.caseById.get(info.lastInsertRowid))));
 });
 
-app.get('/api/admin/cases/:id', (req, res) => {
-  const row = parse(q.caseById.get(Number(req.params.id)));
+app.get('/api/admin/cases/:id', async (req, res) => {
+  const row = parse(await q.caseById.get(Number(req.params.id)));
   if (!row) return res.status(404).json({ error: 'Bulunamadı' });
   res.json(adminCase(row));
 });
 
-app.put('/api/admin/cases/:id', (req, res) => {
-  const row = q.caseById.get(Number(req.params.id));
+app.put('/api/admin/cases/:id', async (req, res) => {
+  const row = await q.caseById.get(Number(req.params.id));
   if (!row) return res.status(404).json({ error: 'Bulunamadı' });
   const err = validateData(req.body?.data);
   if (err) return res.status(400).json({ error: err });
-  q.updateCaseData.run(JSON.stringify(req.body.data), now(), row.id);
+  await q.updateCaseData.run(JSON.stringify(req.body.data), now(), row.id);
   lbCache.delete(row.id);
-  res.json(adminCase(parse(q.caseById.get(row.id))));
+  res.json(adminCase(parse(await q.caseById.get(row.id))));
 });
 
-app.post('/api/admin/cases/:id/status', (req, res) => {
-  const row = q.caseById.get(Number(req.params.id));
+app.post('/api/admin/cases/:id/status', async (req, res) => {
+  const row = await q.caseById.get(Number(req.params.id));
   if (!row) return res.status(404).json({ error: 'Bulunamadı' });
   const { status, publishAt } = req.body || {};
   if (!['draft', 'open', 'closed'].includes(status)) return res.status(400).json({ error: 'Geçersiz durum' });
@@ -296,20 +297,21 @@ app.post('/api/admin/cases/:id/status', (req, res) => {
   }
   if (status === 'closed') closed = now();
   if (status === 'draft') closed = null;
-  q.updateStatus.run(status, pub, closed, now(), row.id);
+  await q.updateStatus.run(status, pub, closed, now(), row.id);
   lbCache.delete(row.id);
-  res.json(adminCase(parse(q.caseById.get(row.id))));
+  res.json(adminCase(parse(await q.caseById.get(row.id))));
 });
 
-app.delete('/api/admin/cases/:id', (req, res) => {
-  q.deleteCase.run(Number(req.params.id));
+app.delete('/api/admin/cases/:id', async (req, res) => {
+  await q.deleteCase.run(Number(req.params.id));
+  lbCache.clear();
   res.json({ ok: true });
 });
 
-app.get('/api/admin/cases/:id/submissions', (req, res) => {
-  const row = q.caseById.get(Number(req.params.id));
+app.get('/api/admin/cases/:id/submissions', async (req, res) => {
+  const row = await q.caseById.get(Number(req.params.id));
   if (!row) return res.status(404).json({ error: 'Bulunamadı' });
-  const list = q.subsForCase.all(row.id).map((s) => ({
+  const list = (await q.subsForCase.all(row.id)).map((s) => ({
     id: s.id,
     username: s.username,
     answer: JSON.parse(s.answer),
@@ -320,8 +322,8 @@ app.get('/api/admin/cases/:id/submissions', (req, res) => {
   res.json({ list });
 });
 
-app.delete('/api/admin/submissions/:id', (req, res) => {
-  q.deleteSub.run(Number(req.params.id));
+app.delete('/api/admin/submissions/:id', async (req, res) => {
+  await q.deleteSub.run(Number(req.params.id));
   lbCache.clear();
   res.json({ ok: true });
 });
@@ -355,6 +357,6 @@ app.listen(...(HOST ? [PORT, HOST] : [PORT]), (err) => {
 });
 
 process.on('SIGINT', () => {
-  db.close();
+  client.close();
   process.exit(0);
 });

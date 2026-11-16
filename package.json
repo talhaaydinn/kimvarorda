@@ -17,10 +17,10 @@
     "video:voice": "node scripts/video-voice.mjs",
     "video:studio": "remotion studio",
     "video:render": "remotion render NasilOynanir out/nasil-oynanir.mp4",
-    "deploy": "node deploy/deploy.mjs",
-    "backup": "node deploy/backup.mjs"
+    "backup": "node scripts/backup.mjs"
   },
   "dependencies": {
+    "@libsql/client": "0.18.0",
     "express": "^5.1.0"
   },
   "devDependencies": {

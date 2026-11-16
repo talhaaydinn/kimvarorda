@@ -1,0 +1,28 @@
+# Render Blueprint — Render panelinde: New → Blueprint → bu repoyu seç.
+# "sync: false" olan değerleri Render kurulum sırasında senden ister.
+services:
+  - type: web
+    name: kimvarorda
+    runtime: node
+    plan: free
+    region: frankfurt
+    # NODE_ENV=production derlemede devDependencies'i (Vite) atlatır; --include=dev şart
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+      # Render'ın proxy'si arkasında gerçek ziyaretçi IP'si için (deploy sonrası /api/health ile doğrula)
+      - key: TRUST_PROXY
+        value: "1"
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: TURSO_DATABASE_URL
+        sync: false
+      - key: TURSO_AUTH_TOKEN
+        sync: false

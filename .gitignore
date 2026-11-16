@@ -3,6 +3,5 @@ dist/
 data/
 .env
 out/
-deploy/.deploy.env
 *.key
 *.pem
