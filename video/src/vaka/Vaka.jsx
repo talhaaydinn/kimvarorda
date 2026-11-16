@@ -276,6 +276,99 @@ function Ozet({ s }) {
   );
 }
 
+/** Görev kartı: numara + başlık + sağda küçük animasyon */
+function Adim({ n, title, at, color, children }) {
+  const p = useSpring(at);
+  return (
+    <div style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 30, background: 'rgba(27,25,21,0.88)', border: `2px solid ${p > 0.5 ? color : C.line}`, borderRadius: 30, padding: '30px 34px', ...fadeUp(p) }}>
+      <div style={{ width: 84, height: 84, borderRadius: 999, background: color, color: '#1a0905', display: 'grid', placeItems: 'center', fontFamily: SERIF, fontWeight: 900, fontSize: 50, flex: 'none' }}>{n}</div>
+      <div style={{ flex: 1, fontFamily: SERIF, fontWeight: 900, fontSize: 54, lineHeight: 1.08, color: C.text }}>{title}</div>
+      <div style={{ width: 250, height: 190, flex: 'none', display: 'grid', placeItems: 'center' }}>{children}</div>
+    </div>
+  );
+}
+
+/** 3×3 tablo, hücreler sırayla ✗ / ✓ ile dolar (rastgele örnek, çözüm değil) */
+function MiniTablo({ at }) {
+  const frame = useCurrentFrame();
+  const marks = ['x', 'o', 'x', 'x', 'x', 'o', 'o', 'x', 'x'];
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 58px)', gap: 8 }}>
+      {marks.map((m, i) => {
+        const p = interpolate(frame, [at + 8 + i * 5, at + 14 + i * 5], [0, 1], clamp);
+        return (
+          <div key={i} style={{ width: 58, height: 58, borderRadius: 10, background: C.surface2, border: `2px solid ${C.line2}`, display: 'grid', placeItems: 'center', fontFamily: SANS, fontWeight: 700, fontSize: 36, color: m === 'o' ? C.ok : C.bad }}>
+            <span style={{ opacity: p, transform: `scale(${0.4 + p * 0.6})` }}>{m === 'o' ? '✓' : '✗'}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Siluet üzerinde gezinen büyüteç ve soru işareti */
+function MiniBuyutec({ at }) {
+  const frame = useCurrentFrame();
+  const t = Math.max(0, frame - at);
+  const x = 125 + Math.sin(t / 14) * 46;
+  const y = 92 + Math.cos(t / 19) * 22;
+  return (
+    <svg width={250} height={190} viewBox="0 0 250 190">
+      <g fill={C.line2}>
+        <circle cx={125} cy={62} r={30} />
+        <path d="M70,182 Q74,104 125,100 Q176,104 180,182 Z" />
+      </g>
+      <text x={125} y={78} textAnchor="middle" fontFamily={SERIF} fontWeight={900} fontSize={44} fill={C.suspect} opacity={0.5 + 0.5 * Math.sin(t / 6)}>?</text>
+      <g transform={`translate(${x},${y})`}>
+        <circle r={38} fill="rgba(242,184,75,0.12)" stroke={C.gold} strokeWidth={8} />
+        <line x1={27} y1={27} x2={62} y2={62} stroke={C.gold} strokeWidth={13} strokeLinecap="round" />
+      </g>
+    </svg>
+  );
+}
+
+/** Sıralama: en üste "Senin adın" kayarak girer */
+function MiniSiralama({ at }) {
+  const frame = useCurrentFrame();
+  const p = spring({ frame: frame - at - 10, fps: FPS, config: { damping: 13, stiffness: 120 } });
+  const row = (rank, name, hl, style) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, height: 48, padding: '0 14px', borderRadius: 10, background: hl ? 'rgba(242,184,75,0.18)' : C.surface2, border: `2px solid ${hl ? C.gold : C.line}`, fontFamily: SANS, fontWeight: 600, fontSize: 25, color: hl ? C.gold : C.muted, ...style }}>
+      <span style={{ fontFamily: MONO, minWidth: 34 }}>{rank}</span>
+      <span>{name}</span>
+    </div>
+  );
+  return (
+    <div style={{ width: 250, display: 'grid', gap: 8 }}>
+      {row('🏆', 'Senin adın', true, { opacity: p, transform: `translateX(${(1 - p) * 120}px)` })}
+      {row(p > 0.5 ? '2.' : '1.', '••••••', false, { transform: `translateY(${(1 - p) * -56}px)` })}
+      {row(p > 0.5 ? '3.' : '2.', '••••', false, { transform: `translateY(${(1 - p) * -56}px)` })}
+    </div>
+  );
+}
+
+function Gorev({ s }) {
+  const a1 = cue(s, 'tabloyu', 0.3);
+  const a2 = cue(s, 'katili', 0.5);
+  const a3 = cue(s, 'adın', 0.7);
+  return (
+    <AbsoluteFill>
+      <Backdrop s={s} />
+      <Stage>
+        <Kicker style={fadeUp(useSpring(0))}>Sıra sende</Kicker>
+        <div style={{ marginTop: 26, fontFamily: SANS, fontWeight: 600, fontSize: 40, color: C.muted, ...fadeUp(useSpring(4)) }}>{SITE}</div>
+        <div style={{ marginTop: 54, width: '100%', display: 'grid', gap: 30 }}>
+          <Adim n={1} title="Tabloyu doldur" at={a1} color={C.location}><MiniTablo at={a1} /></Adim>
+          <Adim n={2} title="Katili bul" at={a2} color={C.suspect}><MiniBuyutec at={a2} /></Adim>
+          <Adim n={3} title="Adın sıralamaya yazılsın" at={a3} color={C.gold}><MiniSiralama at={a3} /></Adim>
+        </div>
+        <Sfx name="pop" at={a1} volume={0.35} />
+        <Sfx name="pop" at={a2} volume={0.35} />
+        <Sfx name="hit" at={a3} volume={0.45} />
+      </Stage>
+    </AbsoluteFill>
+  );
+}
+
 function Cta({ s }) {
   const frame = useCurrentFrame();
   const urlAt = cue(s, 'kimvarorda', 0.5);
@@ -301,7 +394,7 @@ function Cta({ s }) {
   );
 }
 
-const VIEWS = { kapak: Kapak, hikaye: Hikaye, kategori: Kategori, ipucu: Ipucu, ozet: Ozet, cta: Cta };
+const VIEWS = { kapak: Kapak, hikaye: Hikaye, kategori: Kategori, ipucu: Ipucu, ozet: Ozet, gorev: Gorev, cta: Cta };
 
 export function Vaka() {
   return (
