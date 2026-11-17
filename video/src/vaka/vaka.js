@@ -1,9 +1,9 @@
-// Otomatik üretildi: npm run video:vaka -- data/vakalar/son-vapur-v3.json
+// Otomatik üretildi: npm run video:vaka -- data/vakalar/karda-kalan-tren.json
 // Yalnızca herkese açık bilgiler (çözüm yok).
 export const VAKA = {
-  "no": 1,
-  "title": "Son Vapur",
-  "story": "Sisin Boğaz'ı yuttuğu bir kasım gecesi, Eminönü'nden kalkan son vapur Kadıköy'e yanaştığında Kaptan Nuri Bey'in cansız bedeni bulundu. Yolculuk boyunca vapurdan kimse inmedi, kimse binmedi.\n\nGemide üç kişi daha vardı. Her biri gece boyunca tek bir yerdeydi ve elinde tek bir şey vardı. Aralarından biri katil.\n\nKim? Nerede? Neyle?",
+  "no": 2,
+  "title": "Karda Kalan Tren",
+  "story": "Kars'a giden gece treni, tipinin ortasında bir dağ geçidinde karlara saplandı. Sabaha karşı emekli hâkim Cevdet Bey'in cansız bedeni bulundu. Kapılar donmuştu; trenden kimse inemedi, kimse binemedi.\n\nVagonlarda üç kişi daha vardı. Her biri o gece tek bir yerdeydi ve elinde tek bir şey vardı. Aralarından biri katil.\n\nKim? Nerede? Neyle?",
   "categories": [
     {
       "key": "suspect",
@@ -11,32 +11,32 @@ export const VAKA = {
       "items": [
         {
           "id": "s1",
-          "name": "Çaycı Hüsnü",
-          "emoji": "👴",
-          "desc": "Yirmi yıldır bu vapurda çay taşıyor. Tepsisi elinden hiç düşmez.",
+          "name": "Kondüktör Rasim",
+          "emoji": "🎫",
+          "desc": "Otuz yıldır bu hatta bilet deliyor. Beyaz eldivenlerini hiç çıkarmaz.",
           "traits": [
-            "bıyıklı",
-            "kısa boylu"
+            "uzun boylu",
+            "bıyıklı"
           ]
         },
         {
           "id": "s2",
-          "name": "Ressam Lale",
-          "emoji": "🎨",
-          "desc": "Her akşam Boğaz'ı çizer. Parmakları hep boyalı, gözlüğü hep burnunun ucunda.",
+          "name": "Aşçı Nermin",
+          "emoji": "🧑‍🍳",
+          "desc": "Yemekli vagonun aşçısı. Gözlüğü buhardan hep buğulu.",
           "traits": [
-            "uzun boylu",
+            "kısa boylu",
             "gözlüklü"
           ]
         },
         {
           "id": "s3",
-          "name": "Makinist Cemil",
-          "emoji": "👷",
-          "desc": "Vapurun kalbi onun ellerinde. Elleri yağ ve mazot kokar.",
+          "name": "Fotoğrafçı Selin",
+          "emoji": "📷",
+          "desc": "Doğu Anadolu'nun karını çekmek için yola çıkmış. Fotoğraf makinesi boynundan inmez.",
           "traits": [
-            "bıyıklı",
-            "uzun boylu"
+            "uzun boylu",
+            "gözlüklü"
           ]
         }
       ]
@@ -47,9 +47,9 @@ export const VAKA = {
       "items": [
         {
           "id": "w1",
-          "name": "İngiliz anahtarı",
-          "emoji": "🔧",
-          "desc": "Makine dairesinden eksilmiş. Yağlı, demir ve ağır.",
+          "name": "Kömür küreği",
+          "emoji": "🪏",
+          "desc": "Sobanın yanından alınmış. Ağır, demir, kurum kaplı.",
           "traits": [
             "ağır",
             "metal"
@@ -57,21 +57,21 @@ export const VAKA = {
         },
         {
           "id": "w2",
-          "name": "Zehirli şeker",
-          "emoji": "🍬",
-          "desc": "Çay tabağındaki şekerlerden biri. Hafifçe acı badem kokuyor.",
+          "name": "Ekmek bıçağı",
+          "emoji": "🔪",
+          "desc": "Yemekli vagonun ekmek tahtasından. Dişli ve keskin.",
           "traits": [
-            "hafif"
+            "keskin",
+            "metal"
           ]
         },
         {
           "id": "w3",
-          "name": "El feneri",
-          "emoji": "🔦",
-          "desc": "Bekçinin uzun, metal feneri. Camı çatlamış.",
+          "name": "Yün atkı",
+          "emoji": "🧣",
+          "desc": "Kalın, uzun, kırmızı bir atkı. Ucu sökülmüş.",
           "traits": [
-            "ağır",
-            "metal"
+            "hafif"
           ]
         }
       ]
@@ -82,9 +82,9 @@ export const VAKA = {
       "items": [
         {
           "id": "l1",
-          "name": "Çay ocağı",
-          "emoji": "☕",
-          "desc": "Semaver fokurduyor; ince belli bardaklar sıra sıra dizili.",
+          "name": "Yemekli vagon",
+          "emoji": "🍽️",
+          "desc": "Beyaz örtülü masalar, çinko tezgâh ve tıkırdayan bir soba.",
           "traits": [
             "kapalı",
             "sıcak"
@@ -92,19 +92,19 @@ export const VAKA = {
         },
         {
           "id": "l2",
-          "name": "Makine dairesi",
-          "emoji": "⚙️",
-          "desc": "Pistonlar gürlüyor; havada mazot ve yanık yağ kokusu.",
+          "name": "Yataklı kompartıman",
+          "emoji": "🛏️",
+          "desc": "Ranzalı, dar bir kompartıman. Perdeler kapalı.",
           "traits": [
             "kapalı",
-            "gürültülü"
+            "dar"
           ]
         },
         {
           "id": "l3",
-          "name": "Arka güverte",
-          "emoji": "🌊",
-          "desc": "Açık hava. Sis, ıslak tahtalar ve martı çığlıkları.",
+          "name": "Arka balkon",
+          "emoji": "❄️",
+          "desc": "Son vagonun açık balkonu. Korkuluklar buz tutmuş.",
           "traits": [
             "açık",
             "soğuk"
@@ -115,28 +115,28 @@ export const VAKA = {
   ],
   "clues": [
     {
-      "id": "chm8e2ub",
-      "text": "Açık havada, sisin içinde bir ışık titriyordu."
+      "id": "c1",
+      "text": "POV: Cesedin yanına diz çöküyorsun. Paltosunun üstünde erimemiş kar taneleri var."
     },
     {
-      "id": "cj7u3nlw",
-      "text": "İnce belli bardaklar yıkanmıştı ama tepsi çay dağıtımına çıkmıştı; oysaki hiç yolcu yoktu."
+      "id": "c2",
+      "text": "POV: Yemekli vagona giriyorsun. Ekmek tahtasında kırıntılar duruyor ama tahtanın yanındaki dişli kesici yerinde yok."
     },
     {
-      "id": "c9tkik5v",
-      "text": "Kulakları sağır eden bir gürültünün içinden gözlüklü birinin gölgesi görünüyordu."
+      "id": "c3",
+      "text": "POV: Yataklı kompartımanın kapısını aralıyorsun. İçerideki gölge, başını üst ranzaya çarpmamak için eğiliyor."
     },
     {
-      "id": "coeecf29",
-      "text": "Olayı kıyıdan gören kişi katilin uzun boylu olduğunu belirtti."
+      "id": "c4",
+      "text": "POV: Yemekli vagondaki buğulu aynaya bakıyorsun. Çorba buharının ardında kalın, kır bir bıyık seçiliyor."
     },
     {
-      "id": "cor9iv23",
-      "text": "Dedektif cesedin yakasını kokladı ve hiçbir koku almadı."
+      "id": "c5",
+      "text": "POV: Kondüktörün yanından geçiyorsun. Beyaz eldivenlerinde tek bir kurum lekesi bile yok."
     },
     {
-      "id": "c7y2vawf",
-      "text": "Adli tıp, kurbanın hafif bir şey ile veya gıda zehirlenmesi ile öldürülmediğini kesin olarak söyledi."
+      "id": "c6",
+      "text": "POV: Arka balkonun buz tutmuş korkuluğuna dokunuyorsun. Buzun üstünde tek bir dişli çizik bile yok."
     }
   ]
 };

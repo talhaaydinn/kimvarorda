@@ -5,15 +5,15 @@ import { C, MONO, SANS, SERIF } from '../theme.js';
 import { FPS, cue, makeTimeline } from '../timeline.js';
 import { Background, Brand, Kicker, Mark, Sfx, Stage, Track, clamp, fadeUp, useSpring } from '../ui.jsx';
 import { VAKA } from './vaka.js';
-import { SCENES, SITE, STORY_OPEN, STORY_REST } from './script.js';
+import { SCENES, SITE, STORY_OPEN, STORY_REST, clueText } from './script.js';
 import manifest from './voice-manifest.json';
-import { ART_FOR, ITEM_ART, World } from './art.jsx';
+import { ART } from './art.jsx';
 
 const { TIMELINE, TOTAL } = makeTimeline(SCENES, manifest, { lead: 0.2 });
 export const VAKA_TOTAL = TOTAL;
 
-// Çizimler yalnızca yazıldıkları vakada kullanılır; başka bir vakada emojili sade görünüm
-const ART = VAKA.title === ART_FOR;
+// Çizimler yalnızca yazıldıkları vakada kullanılır (art.jsx); yoksa emojili sade görünüm
+const World = ART?.World;
 
 const CAT_COLOR = { suspect: C.suspect, weapon: C.weapon, location: C.location, motive: '#a98bff' };
 const norm = (w) => w.toLocaleLowerCase('tr').replace(/[^\p{L}\p{N}]/gu, '');
@@ -159,7 +159,7 @@ function KategoriArt({ s }) {
       </div>
       <div style={{ position: 'relative', width: '100%', height: 705, marginTop: 26 }}>
         {cat.items.map((it, i) => {
-          const Art = ITEM_ART[it.id];
+          const Art = ART.ITEM_ART[it.id];
           const o = vis(i);
           if (o <= 0) return null;
           const zoom = interpolate(frame, [ats[i], ats[i] + 240], [1, 1.07], clamp);
@@ -235,8 +235,29 @@ function ItemRow({ item, color, at, active, compact }) {
   );
 }
 
+/** POV ipucu: üstte birinci şahıs kamera, altta ipucu */
+function PovIpucu({ s, cl, Pov }) {
+  const text = clueText(cl.text);
+  const size = text.length < 90 ? 44 : 39;
+  return (
+    <AbsoluteFill>
+      <Backdrop s={s} />
+      <Stage style={{ justifyContent: 'flex-start', top: 250 }}>
+        <Kicker style={fadeUp(useSpring(0))}>{`İpucu ${s.clue + 1} / ${VAKA.clues.length}`}</Kicker>
+        <div style={{ marginTop: 22, width: 940, height: 846, borderRadius: 30, overflow: 'hidden', border: `2px solid ${C.line2}`, boxShadow: '0 30px 90px rgba(0,0,0,0.6)', ...fadeUp(useSpring(2), 30) }}>
+          <Pov s={s} />
+        </div>
+        <div style={{ marginTop: 30, width: '100%', fontFamily: SERIF, fontWeight: 700, fontSize: size, lineHeight: 1.25, color: C.text, textAlign: 'center', ...fadeUp(useSpring(6)) }}>{text}</div>
+        <Sfx name="whoosh" at={4} volume={0.25} />
+      </Stage>
+    </AbsoluteFill>
+  );
+}
+
 function Ipucu({ s }) {
   const cl = VAKA.clues[s.clue];
+  const Pov = ART?.POV?.[cl.id];
+  if (Pov) return <PovIpucu s={s} cl={cl} Pov={Pov} />;
   const len = cl.text.length;
   const size = len < 80 ? 64 : len < 130 ? 56 : 48;
   return (
@@ -245,7 +266,7 @@ function Ipucu({ s }) {
       <Stage>
         <Kicker style={fadeUp(useSpring(0))}>{`İpucu ${s.clue + 1} / ${VAKA.clues.length}`}</Kicker>
         <div style={{ marginTop: 40, width: '100%', background: 'rgba(27,25,21,0.92)', border: `2px solid ${C.line2}`, borderRadius: 28, padding: '52px 50px', boxShadow: '0 30px 90px rgba(0,0,0,0.5)', ...fadeUp(useSpring(4)) }}>
-          <div style={{ fontFamily: SERIF, fontWeight: 700, fontSize: size, lineHeight: 1.25, color: C.text }}>{cl.text}</div>
+          <div style={{ fontFamily: SERIF, fontWeight: 700, fontSize: size, lineHeight: 1.25, color: C.text }}>{clueText(cl.text)}</div>
         </div>
         <MiniDosya at={10} style={{ marginTop: 64 }} />
         <Sfx name="type" at={6} volume={0.25} />
@@ -277,7 +298,7 @@ function Ozet({ s }) {
           {VAKA.clues.map((cl, i) => (
             <li key={cl.id} style={{ display: 'flex', gap: 18, fontFamily: SANS, fontWeight: 500, fontSize: 31, lineHeight: 1.3, color: C.text }}>
               <span style={{ fontFamily: MONO, fontWeight: 600, color: C.accent, minWidth: 44 }}>{String(i + 1).padStart(2, '0')}</span>
-              <span>{cl.text}</span>
+              <span>{clueText(cl.text)}</span>
             </li>
           ))}
         </ol>
