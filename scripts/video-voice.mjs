@@ -23,17 +23,20 @@ try {
 
 const API = 'https://api.elevenlabs.io/v1';
 const KEY = process.env.ELEVENLABS_API_KEY;
-const VOICE = process.env.ELEVENLABS_VOICE_ID || 'JBFqnCBsd6RMkjVDRZzb';
 const MODEL = process.env.ELEVENLABS_MODEL || 'eleven_multilingual_v2';
 
 const args = new Set(process.argv.slice(2));
 const PUB = resolve('video/public');
-// --vaka: vaka videosu, --tablo: tablo rehberi (her biri ayrı senaryo, manifest ve ses klasörü); yoksa "Nasıl oynanır?"
-const MODE = args.has('--vaka') ? 'vaka' : args.has('--tablo') ? 'tablo' : null;
+// --vaka: vaka videosu, --tablo: tablo rehberi, --vaka3d: 3B POV hikâye videosu
+// (her biri ayrı senaryo, manifest ve ses klasörü); bayrak yoksa "Nasıl oynanır?"
+const MODE = ['vaka', 'tablo', 'vaka3d'].find((m) => args.has(`--${m}`)) ?? null;
+const SCRIPT = await import(MODE ? `../video/src/${MODE}/script.js` : '../video/src/script.js');
+const { SCENES } = SCRIPT;
+// Senaryo kendi sesini/hızını seçebilir (export VOICE / SPEED); yoksa .env'deki ses
+const VOICE = SCRIPT.VOICE || process.env.ELEVENLABS_VOICE_ID || 'JBFqnCBsd6RMkjVDRZzb';
 // Vaka videoları ~1 dk olmalı: anlatım daha hızlı (ElevenLabs speed 0.7–1.2)
-const SPEED = { vaka: 1.2, tablo: 1.1 }[MODE];
+const SPEED = SCRIPT.SPEED ?? { vaka: 1.2, tablo: 1.1 }[MODE];
 const SETTINGS = { stability: 0.45, similarity_boost: 0.8, style: 0.35, use_speaker_boost: true, ...(SPEED ? { speed: SPEED } : {}) };
-const { SCENES } = await import(MODE ? `../video/src/${MODE}/script.js` : '../video/src/script.js');
 const { SFX } = await import('../video/src/script.js');
 const MANIFEST = resolve(MODE ? `video/src/${MODE}/voice-manifest.json` : 'video/src/voice-manifest.json');
 const VOICE_DIR = MODE ? `${MODE}/voice` : 'voice';
